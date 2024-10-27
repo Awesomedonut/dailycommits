@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Lines Committed Today</title>
+</head>
+<body>
+    <h1>Check Today's Committed Lines for a GitHub User</h1>
+    <input type="text" id="username" placeholder="GitHub Username">
+    <button onclick="getUserCommits()">Check Commits</button>
+
+    <p id="result">Total lines of code committed today: <span id="lines">0</span></p>
+
+    <script>
+        async function getUserCommits() {
+            const username = document.getElementById("username").value;
+            const linesElement = document.getElementById("lines");
+            const today = new Date().toISOString().slice(0, 10); // Today's date in YYYY-MM-DD format
+            let totalLines = 0;
+
+            try {
+                // Fetch user's recent events
+                const response = await fetch(`https://api.github.com/users/${username}/events?per_page=100`);
+                const events = await response.json();
+
+                // Filter push events and count today's lines committed
+                for (let event of events) {
+                    if (event.type === "PushEvent" && event.created_at.startsWith(today)) {
+                        for (let commit of event.payload.commits) {
+                            // Fetch each commit's details
+                            const commitUrl = commit.url;
+                            const commitDetails = await fetch(commitUrl).then(res => res.json());
+
+                            // Sum up lines added and removed
+                            commitDetails.files.forEach(file => {
+                                totalLines += file.additions + file.deletions;
+                            });
+                        }
+                    }
+                }
+
+                linesElement.textContent = totalLines;
+            } catch (error) {
+                console.error("Error fetching commit data:", error);
+                linesElement.textContent = "Error fetching data. Please try again.";
+            }
+        }
+    </script>
+</body>
+</html>
